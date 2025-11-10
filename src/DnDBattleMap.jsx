@@ -1,19 +1,23 @@
 import React, { useState } from 'react';
-import { Trash2, Heart, Swords, Users, Box } from 'lucide-react';
+import {Trash2, Heart, Swords, Users, Box } from 'lucide-react';
 
 const DnDBattleMap = () => {
   const [gridSize] = useState({ rows: 20, cols: 20 });
   const [entities, setEntities] = useState([]);
   const [objects, setObjects] = useState([]);
   const [selectedEntity, setSelectedEntity] = useState(null);
+  const [selectedObject, setSelectedObject] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showObjectModal, setShowObjectModal] = useState(false);
+  const [showBgModal, setShowBgModal] = useState(false);
   const [modalType, setModalType] = useState('player');
+  const [backgroundImage, setBackgroundImage] = useState('');
+  const [hpChange, setHpChange] = useState('');
   const [newEntity, setNewEntity] = useState({
     name: '',
-    hp: 20,
-    maxHp: 20,
-    initiative: 10,
+    hp: 0,
+    maxHp: 0,
+    initiative: 0,
     type: 'player',
     hideHp: false,
     row: 0,
@@ -26,18 +30,17 @@ const DnDBattleMap = () => {
     col: 0,
     color: '#805ad5'
   });
-  const [selectedObject, setSelectedObject] = useState(null);
 
   const colors = ['#4299e1', '#48bb78', '#ed8936', '#e53e3e', '#9f7aea', '#38b2ac', '#ed64a6'];
 
   const addEntity = () => {
-    if (newEntity.name.trim()) {
+    if (newEntity.name.trim() && newEntity.maxHp > 0) {
       setEntities([...entities, { ...newEntity, id: Date.now() }]);
       setNewEntity({
         name: '',
-        hp: 20,
-        maxHp: 20,
-        initiative: 10,
+        hp: 0,
+        maxHp: 0,
+        initiative: 0,
         type: modalType,
         hideHp: false,
         row: 0,
@@ -86,6 +89,7 @@ const DnDBattleMap = () => {
 
   const deleteObject = (id) => {
     setObjects(objects.filter(o => o.id !== id));
+    if (selectedObject === id) setSelectedObject(null);
   };
 
   const toggleHpVisibility = (id) => {
@@ -167,6 +171,12 @@ const DnDBattleMap = () => {
           <Box size={16} className="md:w-5 md:h-5" />
           Add Object
         </button>
+        <button
+          onClick={() => setShowBgModal(true)}
+          className="bg-gray-600 hover:bg-gray-700 px-3 md:px-4 py-2 rounded font-semibold text-sm md:text-base"
+        >
+          🖼️ Set Background
+        </button>
 
         {/* Selected Entity Controls */}
         {selectedEntity && entities.find(e => e.id === selectedEntity) && (
@@ -175,32 +185,40 @@ const DnDBattleMap = () => {
               {entities.find(e => e.id === selectedEntity)?.name}
             </h3>
             <div className="space-y-2">
-              <div className="flex gap-2">
-                <button
-                  onClick={() => updateHp(selectedEntity, -5)}
-                  className="flex-1 bg-red-600 hover:bg-red-700 px-2 md:px-3 py-2 rounded text-sm md:text-base"
-                >
-                  -5 HP
-                </button>
-                <button
-                  onClick={() => updateHp(selectedEntity, -1)}
-                  className="flex-1 bg-red-600 hover:bg-red-700 px-2 md:px-3 py-2 rounded text-sm md:text-base"
-                >
-                  -1 HP
-                </button>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="number"
+                  value={hpChange}
+                  onChange={(e) => setHpChange(e.target.value)}
+                  placeholder="0"
+                  className="flex-1 px-2 py-2 bg-gray-700 rounded text-sm md:text-base"
+                />
+                <span className="text-xs md:text-sm text-gray-400">HP</span>
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => updateHp(selectedEntity, 1)}
-                  className="flex-1 bg-green-600 hover:bg-green-700 px-2 md:px-3 py-2 rounded text-sm md:text-base"
+                  onClick={() => {
+                    const value = parseInt(hpChange) || 0;
+                    if (value !== 0) {
+                      updateHp(selectedEntity, -Math.abs(value));
+                      setHpChange('');
+                    }
+                  }}
+                  className="flex-1 bg-red-600 hover:bg-red-700 px-2 md:px-3 py-2 rounded text-sm md:text-base"
                 >
-                  +1 HP
+                  Damage
                 </button>
                 <button
-                  onClick={() => updateHp(selectedEntity, 5)}
+                  onClick={() => {
+                    const value = parseInt(hpChange) || 0;
+                    if (value !== 0) {
+                      updateHp(selectedEntity, Math.abs(value));
+                      setHpChange('');
+                    }
+                  }}
                   className="flex-1 bg-green-600 hover:bg-green-700 px-2 md:px-3 py-2 rounded text-sm md:text-base"
                 >
-                  +5 HP
+                  Heal
                 </button>
               </div>
               {entities.find(e => e.id === selectedEntity)?.type === 'monster' && (
@@ -246,7 +264,10 @@ const DnDBattleMap = () => {
 
       {/* Main Grid */}
       <div className="flex-1 overflow-auto bg-gray-800 rounded-lg p-2 md:p-4">
-        <div className="inline-block min-w-full">
+        <div 
+          className="inline-block min-w-full bg-cover bg-center bg-no-repeat"
+          style={backgroundImage ? { backgroundImage: `url(${backgroundImage})` } : {}}
+        >
           {Array.from({ length: gridSize.rows }).map((_, row) => (
             <div key={row} className="flex">
               {Array.from({ length: gridSize.cols }).map((_, col) => {
@@ -264,7 +285,7 @@ const DnDBattleMap = () => {
                       minWidth: `${cellSize}px`,
                       minHeight: `${cellSize}px`
                     }}
-                    className={`border border-gray-600 cursor-pointer hover:bg-gray-700 transition-colors ${
+                    className={`border border-gray-600 cursor-pointer hover:bg-gray-700 hover:bg-opacity-30 transition-colors ${
                       selectedEntity && entity?.id === selectedEntity ? 'ring-2 ring-yellow-400' : ''
                     } ${
                       selectedObject && obj?.id === selectedObject ? 'ring-2 ring-purple-400' : ''
@@ -329,23 +350,31 @@ const DnDBattleMap = () => {
                 onChange={(e) => setNewEntity({ ...newEntity, name: e.target.value })}
                 className="w-full px-3 py-2 bg-gray-700 rounded text-sm md:text-base"
               />
-              <input
-                type="number"
-                placeholder="Max HP"
-                value={newEntity.maxHp}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value) || 20;
-                  setNewEntity({ ...newEntity, maxHp: val, hp: val });
-                }}
-                className="w-full px-3 py-2 bg-gray-700 rounded text-sm md:text-base"
-              />
-              <input
-                type="number"
-                placeholder="Initiative"
-                value={newEntity.initiative}
-                onChange={(e) => setNewEntity({ ...newEntity, initiative: parseInt(e.target.value) || 10 })}
-                className="w-full px-3 py-2 bg-gray-700 rounded text-sm md:text-base"
-              />
+              <div className="flex gap-2 items-center">
+                <Heart size={18} className="text-red-400 flex-shrink-0" />
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={newEntity.maxHp === 0 ? '' : newEntity.maxHp}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value) || 0;
+                    setNewEntity({ ...newEntity, maxHp: val, hp: val });
+                  }}
+                  className="flex-1 px-3 py-2 bg-gray-700 rounded text-sm md:text-base"
+                />
+                <span className="text-xs text-gray-400">Max HP</span>
+              </div>
+              <div className="flex gap-2 items-center">
+                <Swords size={18} className="text-blue-400 flex-shrink-0" />
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={newEntity.initiative === 0 ? '' : newEntity.initiative}
+                  onChange={(e) => setNewEntity({ ...newEntity, initiative: parseInt(e.target.value) || 0 })}
+                  className="flex-1 px-3 py-2 bg-gray-700 rounded text-sm md:text-base"
+                />
+                <span className="text-xs text-gray-400">Initiative</span>
+              </div>
               <div className="flex gap-2">
                 <button
                   onClick={addEntity}
@@ -390,6 +419,42 @@ const DnDBattleMap = () => {
                   className="flex-1 bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded text-sm md:text-base"
                 >
                   Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Background Image Modal */}
+      {showBgModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg p-4 md:p-6 w-full max-w-md">
+            <h2 className="text-lg md:text-xl font-bold mb-4">Set Background Image</h2>
+            <div className="space-y-3">
+              <input
+                type="text"
+                placeholder="Image URL"
+                value={backgroundImage}
+                onChange={(e) => setBackgroundImage(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-700 rounded text-sm md:text-base"
+              />
+              <p className="text-xs text-gray-400">Paste an image URL to use as the grid background</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowBgModal(false)}
+                  className="flex-1 bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-sm md:text-base"
+                >
+                  Apply
+                </button>
+                <button
+                  onClick={() => {
+                    setBackgroundImage('');
+                    setShowBgModal(false);
+                  }}
+                  className="flex-1 bg-red-600 hover:bg-red-700 px-4 py-2 rounded text-sm md:text-base"
+                >
+                  Clear
                 </button>
               </div>
             </div>
