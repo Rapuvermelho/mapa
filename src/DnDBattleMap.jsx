@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Heart, Swords, Users, Box } from 'lucide-react';
+import {Trash2, Heart, Swords, Users, Box } from 'lucide-react';
 
 const DnDBattleMap = () => {
   const [gridSize] = useState({ rows: 20, cols: 20 });
